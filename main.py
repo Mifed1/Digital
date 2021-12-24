@@ -168,4 +168,4 @@ async def rob(ctx, member : discord.Member):
 
     await ctx.send(f"**You robbed `${earnings}` coins from {member.mention}**")
 
-client.run("OTIzODE3MDk4NTAzOTE3NTk5.YcVhtw.m0qSdY4DeUzm_vKBjLCcSMRjCqo")
+client.run()
