@@ -1,4 +1,1 @@
 discord.py
-random
-os
-json
