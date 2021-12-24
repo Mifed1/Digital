@@ -1,171 +1,71 @@
 import discord
 from discord.ext import commands
-import json
 import os
-import random
-os.chdir("D:\\Discord Servers\\Award Bot")
+import datetime
 
-client = commands.Bot(command_prefix = "-") 
+PREFIX = "d "
+client = commands.Bot(command_prefix = PREFIX) 
+client.remove_command('help')
+
+@client.command()
+async def load(ctx, extension):
+    client.load_extension(f'commands.{extension}')
+
+@client.command()
+async def unload(ctx, extension):
+    client.unload_extension(f'commands.{extension}')
+
+@client.command()
+async def reload(ctx, extension):
+    client.unload_extension(f'commands.{extension}')
+    client.load_extension(f'commands.{extension}')
+
+for filename in os.listdir('./commands'):
+    if filename.endswith('.py'):
+        client.load_extension(f'commands.{filename[:-3]}')
 
 @client.event
 async def on_ready():
-    print("Ready")
+    '''Bot Activity'''
 
-@client.command(aliases=['bal'])
-async def balance(ctx):
-    user = ctx.author
-    users = await get_bank_data()
-
-    if str(user.id) not in users:
-        await ctx.send("no data")
-    else:
-        await open_account(ctx.author)
-        wallet_amt = users[str(user.id)]["wallet"]
-        bank_amt = users[str(user.id)]["bank"]
-
-        em = discord.Embed(title = f"{user.name}'s Balance")
-        em.add_field(name = ":coin: Wallet:", value= f"<:reply:923840860901220393>${wallet_amt}")
-        em.add_field(name = ":bank: Bank:", value= f"<:reply:923840860901220393>${bank_amt}", inline=False) 
-        await ctx.send(embed = em) 
-
-@client.command()
-async def beg(ctx):
-    await open_account(ctx.author)
-    
-    users = await get_bank_data()
-
-    user = ctx.author
-
-    earnings = random.randrange(101)
-    
-    await ctx.send (f"Someone gave you {earnings} coins!")
-
-    users[str(user.id)]["wallet"] += earnings
-
-    with open("mainbank.json","w") as f:
-        json.dump (users, f)
-
-async def open_account(user):
-    
-    users = await get_bank_data()
-    
-    if str(user.id) in users:
-        return False
-
-    else:
-        users[str(user.id)] = {}
-        users[str(user.id)]["wallet"] = 0
-        users[str(user.id)]["bank"] = 0
-                                                                        
-    with open("mainbank.json","w") as f:
-        json.dump(users, f)
-    return True
-
-async def get_bank_data():
-    with open("mainbank.json","r") as f:
-        users = json.load(f)
-        
-    return users
-
-async def update_bank(user,change = 0, mode = "wallet"):
-    users = await get_bank_data()
-
-    users[str(user.id)][mode] += change
-
-    with open("mainbank.json","w") as f:
-        json.dump(users,f)
-    bal = [users[str(user.id)]["wallet"],users[str(user.id)]["bank"]]
-
-    return bal
+    activity = discord.Game(name=f"{PREFIX}help", type=2)
+    await client.change_presence(status=discord.Status.online, activity=activity)
+    print(f"Logged in as {client.user} ID: {client.user.id}")
 
 
-@client.command(aliases=['with'])
-async def withdraw(ctx,amount = None):
-    await open_account(ctx.author)
-    if amount == None:
-       await ctx.send("Please enter the amount")
-       return
+#   Help Command
 
-    bal = await update_bank(ctx.author)
+@client.group(invoke_without_command=True)
+async def help(ctx):
+    em = discord.Embed(
+        title="Help menu",
+        description=f"Hi there! my prefix is `{PREFIX}`.",
+        )
 
-    amount = int(amount)
+    em.add_field(name="Useful help commands", value=f"`{PREFIX}help commands` Lists all bot commands.\n`{PREFIX}help <command>` Shows some help about a specific command.")
+    em.timestamp = datetime.datetime.utcnow()
+    em.set_author(name=client.user.name, url="", icon_url=client.user.avatar.url)
+    em.set_footer(text=f"Requested by {ctx.author.display_name}", icon_url=ctx.author.avatar.url)
 
-    if amount>bal[1]:
-       await ctx.send("You don't have that much money!")
-       return
-    if amount<0:
-        await ctx.send("Amount must be positive!")
-        return
-    await update_bank(ctx.author, amount)
-    await update_bank(ctx.author,-1*amount,"bank")
+    await ctx.reply(embed = em)
 
-    await ctx.send(f"**:atm: | You withdrew `${amount}` coins!**")
+#   Category Help Commands
 
-
-@client.command(aliases=['dep'])
-async def deposit(ctx,amount = None):
-
-    await open_account(ctx.author)
-    if amount == None:
-       await ctx.send("Please enter the amount")
-       return
-
-    bal = await update_bank(ctx.author)
-
-    amount = int(amount)
-
-    if amount > bal[0]:
-       await ctx.send("You don't have that much money!")
-       return
-    if amount < 0:
-        await ctx.send("Amount must be positive!")
-        return
-    await update_bank(ctx.author, -1*amount)
-    await update_bank(ctx.author, amount,"bank")
-
-    await ctx.send(f"**:atm: | You deposited `${amount}` coins!**")
+@help.command(aliases=['command', 'commands', 'cmds'])
+async def cmd(ctx):
+    em = discord.Embed(
+        title="Commands help menu",
+        description=f"All commands\nFor specific command help do `{PREFIX}help <command>`"
+    )
+    em.add_field(name=":information_source: Info", value="`help`", inline=False)
+    em.add_field(name=":moneybag: Economy", value="`balance`, `pay`, `deposit`, `withdraw`, `beg`, `rob`", inline=False)
+    em.add_field(name=":wrench: Utility", value="`test`, `test`", inline=False)
+    em.add_field(name=":8ball: Fun", value="`test`, `test`", inline=False)
+    em.timestamp = datetime.datetime.utcnow()
+    em.set_author(name=client.user.name, url="", icon_url=client.user.avatar.url)
+    em.set_footer(text=f"Requested by {ctx.author.display_name}", icon_url=ctx.author.avatar.url)
 
 
-@client.command()
-async def pay(ctx, member : discord.Member, amount = None):
-    await open_account(ctx.author)
-    await open_account(member)
+    await ctx.reply(embed = em)
 
-    if amount == None:
-       await ctx.send("Please enter the amount")
-       return
-
-    bal = await update_bank(ctx.author)
-
-    amount = int(amount)
-
-    if amount>bal[1]:
-       await ctx.send("You don't have that much money!")
-       return
-    if amount<0:
-        await ctx.send("Amount must be positive!")
-        return
-    await update_bank(ctx.author, -1*amount, "bank")
-    await update_bank(member, amount, "bank")
-
-    await ctx.send(f"**:atm: | You transferred `${amount}` coins to {member.mention}**")
-
-@client.command()
-async def rob(ctx, member : discord.Member):
-    await open_account(ctx.author)
-    await open_account(member)
-
-    bal = await update_bank(member)
-
-    if bal[0]<100:
-       await ctx.send("forget about it")
-       return
-
-    earnings = random.randrange(0, bal[0])
-
-    await update_bank(ctx.author,earnings, "wallet")
-    await update_bank(member, -1*earnings, "wallet")
-
-    await ctx.send(f"**You robbed `${earnings}` coins from {member.mention}**")
-
-client.run()
+client.run("OTIzODE3MDk4NTAzOTE3NTk5.YcVhtw.m0qSdY4DeUzm_vKBjLCcSMRjCqo")
