@@ -85,4 +85,4 @@ async def commandlist(ctx):
 
     await ctx.reply(embed = em)
 
-client.run("OTIzODE3MDk4NTAzOTE3NTk5.YcVhtw.m0qSdY4DeUzm_vKBjLCcSMRjCqo")
+client.run("")
